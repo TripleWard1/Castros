@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 
 type Lang = "pt" | "en";
+type SectionKey = "home" | "castros" | "itinerarios" | "agenda" | "parceiros" | "experiencias";
 
 type EventItem = {
   id: string;
-  dateISO: string; // YYYY-MM-DD
+  dateISO: string;
   title: Record<Lang, string>;
   location: Record<Lang, string>;
   description: Record<Lang, string>;
@@ -85,26 +86,23 @@ function formatDateISO(iso: string, lang: Lang) {
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>("pt");
-  const [activeSection, setActiveSection] = useState<
-    "home" | "castros" | "itinerarios" | "agenda" | "parceiros" | "experiencias"
-  >("home");
+  const [active, setActive] = useState<SectionKey>("home");
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState<string | null>(null);
 
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const copy = useMemo(() => {
-    const c = {
+    return {
       title: {
         pt: "Rota dos Castros do Noroeste de Portugal",
         en: "Hillfort Route of Northwest Portugal",
       },
       subtitle: {
-        pt: "Património, paisagem e identidade — num companheiro digital elegante para planear e descobrir.",
-        en: "Heritage, landscape and identity — a refined digital companion to plan and discover.",
+        pt: "Arqueologia e paisagem, com uma camada digital moderna para planear, descobrir e viver o território.",
+        en: "Archaeology and landscape, with a modern digital layer to plan, discover and experience the territory.",
       },
-      ctaPrimary: { pt: "Explorar castros", en: "Explore hillforts" },
-      ctaSecondary: { pt: "Ver itinerários", en: "See itineraries" },
-      quick: { pt: "Acesso rápido", en: "Quick access" },
       menu: {
         pt: {
           home: "Início",
@@ -125,7 +123,7 @@ export default function Page() {
       },
       cards: {
         castros: {
-          pt: "Descrições, fotos, mapas, tempos de visita e o que ver nas proximidades.",
+          pt: "Descrições, fotografias, mapas, tempos de visita e o que ver nas proximidades.",
           en: "Descriptions, photos, maps, visit times and nearby highlights.",
         },
         itinerarios: {
@@ -145,37 +143,34 @@ export default function Page() {
           en: "AR/3D to “travel in time” and see hillforts as they were.",
         },
       },
+      ctaPrimary: { pt: "Explorar castros", en: "Explore hillforts" },
+      ctaSecondary: { pt: "Ver itinerários", en: "See itineraries" },
     };
-    return c;
   }, []);
 
-  const menuLabel =
-    lang === "pt"
-      ? copy.menu.pt
-      : copy.menu.en;
+  const menuLabel = lang === "pt" ? copy.menu.pt : copy.menu.en;
 
-  const navItems: Array<{ key: typeof activeSection; label: string }> = [
-    { key: "home", label: menuLabel.home },
-    { key: "castros", label: menuLabel.castros },
-    { key: "itinerarios", label: menuLabel.itinerarios },
-    { key: "agenda", label: menuLabel.agenda },
-    { key: "parceiros", label: menuLabel.parceiros },
-    { key: "experiencias", label: menuLabel.experiencias },
+  const navItems: Array<{ key: SectionKey; label: string; hint: string }> = [
+    { key: "home", label: menuLabel.home, hint: lang === "pt" ? "Visão geral" : "Overview" },
+    { key: "castros", label: menuLabel.castros, hint: lang === "pt" ? "Locais e mapas" : "Places & maps" },
+    { key: "itinerarios", label: menuLabel.itinerarios, hint: lang === "pt" ? "Percursos prontos" : "Ready routes" },
+    { key: "agenda", label: menuLabel.agenda, hint: lang === "pt" ? "Eventos e datas" : "Events & dates" },
+    { key: "parceiros", label: menuLabel.parceiros, hint: lang === "pt" ? "Onde ficar e comer" : "Stay & taste" },
+    { key: "experiencias", label: menuLabel.experiencias, hint: lang === "pt" ? "AR / 3D" : "AR / 3D" },
   ];
 
-  const eventDates = useMemo(() => {
-    const uniq = Array.from(new Set(EVENTS.map((e) => e.dateISO))).sort();
-    return uniq;
-  }, []);
+  const eventDates = useMemo(() => Array.from(new Set(EVENTS.map((e) => e.dateISO))).sort(), []);
+  const selectedEvents = useMemo(() => (calendarDate ? EVENTS.filter((e) => e.dateISO === calendarDate) : []), [calendarDate]);
 
-  const selectedEvents = useMemo(() => {
-    if (!calendarDate) return [];
-    return EVENTS.filter((e) => e.dateISO === calendarDate);
-  }, [calendarDate]);
+  function go(to: SectionKey) {
+    setActive(to);
+    setDrawerOpen(false);
+    // scroll topo (suave)
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <>
-            {/* Ambient background */}
       <div className="bg-ambient" aria-hidden="true">
         <div className="orb orb-a" />
         <div className="orb orb-b" />
@@ -185,20 +180,20 @@ export default function Page() {
       {/* HEADER */}
       <header className="topbar">
         <div className="container topbar-inner">
-          <button className="brand" onClick={() => setActiveSection("home")} aria-label="Ir para início">
+          <button className="brand" onClick={() => go("home")} aria-label="Ir para início">
             <img src={LOGO_URL} alt="Logo" className="brand-logo" />
             <div className="brand-text">
               <div className="brand-title">{copy.title[lang]}</div>
-              <div className="brand-sub">{lang === "pt" ? "Companheiro de viagem" : "Travel companion"}</div>
+              <div className="brand-sub">{lang === "pt" ? "Arqueologia elegante, viagem moderna" : "Elegant archaeology, modern travel"}</div>
             </div>
           </button>
 
-          <nav className="nav">
+          <nav className="nav" aria-label="Navegação">
             {navItems.map((it) => (
               <button
                 key={it.key}
-                className={`nav-item ${activeSection === it.key ? "active" : ""}`}
-                onClick={() => setActiveSection(it.key)}
+                className={`nav-item ${active === it.key ? "active" : ""}`}
+                onClick={() => go(it.key)}
               >
                 {it.label}
               </button>
@@ -219,6 +214,11 @@ export default function Page() {
                 EN
               </button>
             </div>
+
+            {/* Mobile menu */}
+            <button className="hamburger" onClick={() => setDrawerOpen(true)} aria-label="Abrir menu">
+              ☰
+            </button>
           </div>
         </div>
       </header>
@@ -226,38 +226,36 @@ export default function Page() {
       {/* PAGE */}
       <main className="main">
         <div className="container">
-
-          {/* HERO */}
-          {activeSection === "home" && (
+          {/* HOME */}
+          {active === "home" && (
             <>
               <section className="hero">
-                <div className="hero-left">
+                <div>
                   <div className="pill">
                     <span className="dot" />
-                    {lang === "pt" ? "Descoberta • Património • Paisagem" : "Discovery • Heritage • Landscape"}
+                    {lang === "pt" ? "Património • Paisagem • Identidade" : "Heritage • Landscape • Identity"}
                   </div>
 
                   <h1 className="h1">{copy.title[lang]}</h1>
                   <p className="lead">{copy.subtitle[lang]}</p>
 
                   <div className="cta-row">
-                    <button className="btn primary" onClick={() => setActiveSection("castros")}>
-                      {copy.ctaPrimary[lang]}
-                      <span className="btn-arrow">→</span>
+                    <button className="btn primary" onClick={() => go("castros")}>
+                      {copy.ctaPrimary[lang]} <span className="btn-arrow">→</span>
                     </button>
-                    <button className="btn ghost" onClick={() => setActiveSection("itinerarios")}>
+                    <button className="btn ghost" onClick={() => go("itinerarios")}>
                       {copy.ctaSecondary[lang]}
                     </button>
                   </div>
 
                   <div className="stats">
                     <div className="stat">
-                      <div className="stat-k">{lang === "pt" ? "Ritmo" : "Pace"}</div>
-                      <div className="stat-v">{lang === "pt" ? "simples e memorável" : "simple & memorable"}</div>
+                      <div className="stat-k">{lang === "pt" ? "Descoberta" : "Discovery"}</div>
+                      <div className="stat-v">{lang === "pt" ? "castros e paisagem" : "hillforts & landscape"}</div>
                     </div>
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Planeamento" : "Planning"}</div>
-                      <div className="stat-v">{lang === "pt" ? "itinerários e eventos" : "itineraries & events"}</div>
+                      <div className="stat-v">{lang === "pt" ? "itinerários e agenda" : "itineraries & events"}</div>
                     </div>
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Imersão" : "Immersion"}</div>
@@ -266,113 +264,53 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="hero-right">
-                  <div className="hero-card">
-                    <div className="hero-media">
-                      <img
-                        className="hero-img"
-                        alt={lang === "pt" ? "Paisagem do Noroeste (imagem ilustrativa)" : "Northwest landscape (illustrative)"}
-                        src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1800&q=60"
-                      />
-                      <div className="hero-overlay" />
+                <div className="hero-card">
+                  <div className="hero-media">
+                    <img
+                      className="hero-img"
+                      alt={lang === "pt" ? "Paisagem (imagem ilustrativa)" : "Landscape (illustrative)"}
+                      src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1800&q=60"
+                    />
+                    <div className="hero-overlay" />
+                  </div>
+
+                  <div className="hero-card-body">
+                    <div className="hero-mini">
+                      <div className="mini-title">{lang === "pt" ? "Começa por aqui" : "Start here"}</div>
+                      <div className="mini-sub">{lang === "pt" ? "Escolhe um caminho." : "Pick a path."}</div>
                     </div>
 
-                    <div className="hero-card-body">
-                      <div className="hero-mini">
-                        <div className="mini-title">{lang === "pt" ? "Acesso rápido" : "Quick access"}</div>
-                        <div className="mini-sub">
-                          {lang === "pt"
-                            ? "Escolhe um caminho para começar."
-                            : "Pick a path to begin."}
-                        </div>
-                      </div>
-
-                      <div className="quick-grid">
-                        <QuickCard
-                          icon="🏺"
-                          title={lang === "pt" ? "Castros" : "Hillforts"}
-                          desc={lang === "pt" ? "Ver locais e mapas" : "Places & maps"}
-                          onClick={() => setActiveSection("castros")}
-                        />
-                        <QuickCard
-                          icon="🧭"
-                          title={lang === "pt" ? "Itinerários" : "Itineraries"}
-                          desc={lang === "pt" ? "Percursos prontos" : "Ready routes"}
-                          onClick={() => setActiveSection("itinerarios")}
-                        />
-                        <QuickCard
-                          icon="🎭"
-                          title={lang === "pt" ? "Agenda" : "What’s on"}
-                          desc={lang === "pt" ? "Eventos e recriações" : "Events & shows"}
-                          onClick={() => setActiveSection("agenda")}
-                        />
-                        <QuickCard
-                          icon="✨"
-                          title={lang === "pt" ? "Imersivo" : "Immersive"}
-                          desc={lang === "pt" ? "AR/3D (MVP)" : "AR/3D (MVP)"}
-                          onClick={() => setActiveSection("experiencias")}
-                        />
-                      </div>
+                    <div className="quick-grid">
+                      <QuickCard icon="🏺" title={lang === "pt" ? "Castros" : "Hillforts"} desc={lang === "pt" ? "Locais e mapas" : "Places & maps"} onClick={() => go("castros")} />
+                      <QuickCard icon="🧭" title={lang === "pt" ? "Itinerários" : "Itineraries"} desc={lang === "pt" ? "Percursos prontos" : "Ready routes"} onClick={() => go("itinerarios")} />
+                      <QuickCard icon="🎭" title={lang === "pt" ? "Agenda" : "What’s on"} desc={lang === "pt" ? "Eventos e datas" : "Events & dates"} onClick={() => go("agenda")} />
+                      <QuickCard icon="✨" title={lang === "pt" ? "Imersivo" : "Immersive"} desc={lang === "pt" ? "AR/3D (MVP)" : "AR/3D (MVP)"} onClick={() => go("experiencias")} />
                     </div>
                   </div>
                 </div>
               </section>
 
-              {/* MENU CARDS */}
               <section className="section">
                 <div className="section-head">
                   <h2 className="h2">{lang === "pt" ? "Menu principal" : "Main menu"}</h2>
                   <p className="muted">
-                    {lang === "pt"
-                      ? "Um ponto de partida elegante para planear e descobrir."
-                      : "A refined starting point to plan and explore."}
+                    {lang === "pt" ? "Uma experiência moderna com alma arqueológica." : "A modern experience with an archaeological soul."}
                   </p>
                 </div>
 
-                <div className="grid cards">
-
-                  <MenuCard
-                    icon="🏺"
-                    title={menuLabel.castros}
-                    desc={copy.cards.castros[lang]}
-                    onClick={() => setActiveSection("castros")}
-                  />
-                  <MenuCard
-                    icon="🧭"
-                    title={menuLabel.itinerarios}
-                    desc={copy.cards.itinerarios[lang]}
-                    onClick={() => setActiveSection("itinerarios")}
-                  />
-                  <MenuCard
-                    icon="🎭"
-                    title={menuLabel.agenda}
-                    desc={copy.cards.agenda[lang]}
-                    onClick={() => setActiveSection("agenda")}
-                  />
-                  <MenuCard
-                    icon="🍷"
-                    title={menuLabel.parceiros}
-                    desc={copy.cards.parceiros[lang]}
-                    onClick={() => setActiveSection("parceiros")}
-                  />
-                  <MenuCard
-                    icon="✨"
-                    title={menuLabel.experiencias}
-                    desc={copy.cards.experiencias[lang]}
-                    onClick={() => setActiveSection("experiencias")}
-                  />
+                <div className="grid">
+                  <MenuCard icon="🏺" title={menuLabel.castros} desc={copy.cards.castros[lang]} onClick={() => go("castros")} />
+                  <MenuCard icon="🧭" title={menuLabel.itinerarios} desc={copy.cards.itinerarios[lang]} onClick={() => go("itinerarios")} />
+                  <MenuCard icon="🎭" title={menuLabel.agenda} desc={copy.cards.agenda[lang]} onClick={() => go("agenda")} />
+                  <MenuCard icon="🍷" title={menuLabel.parceiros} desc={copy.cards.parceiros[lang]} onClick={() => go("parceiros")} />
+                  <MenuCard icon="✨" title={menuLabel.experiencias} desc={copy.cards.experiencias[lang]} onClick={() => go("experiencias")} />
                 </div>
               </section>
 
-              {/* FEATURED */}
               <section className="section">
                 <div className="section-head">
                   <h2 className="h2">{lang === "pt" ? "Em destaque" : "Featured"}</h2>
-                  <p className="muted">
-                    {lang === "pt"
-                      ? "Dois exemplos para validar estilo e estrutura."
-                      : "Two samples to validate style and structure."}
-                  </p>
+                  <p className="muted">{lang === "pt" ? "Exemplos para validar estilo e estrutura." : "Samples to validate style and structure."}</p>
                 </div>
 
                 <div className="grid-2">
@@ -388,9 +326,7 @@ export default function Page() {
                         </div>
                         <div className="feature-text">{c.snippet[lang]}</div>
                         <div className="feature-sub">
-                          <span className="muted">
-                            {lang === "pt" ? "Nas proximidades: " : "Nearby: "}
-                          </span>
+                          <span style={{ color: "var(--muted)" }}>{lang === "pt" ? "Nas proximidades: " : "Nearby: "}</span>
                           {c.near[lang]}
                         </div>
 
@@ -400,11 +336,7 @@ export default function Page() {
                             className="map"
                             loading="lazy"
                             referrerPolicy="no-referrer-when-downgrade"
-                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.05}%2C${
-                              c.coords.lat - 0.03
-                            }%2C${c.coords.lng + 0.05}%2C${c.coords.lat + 0.03}&layer=mapnik&marker=${
-                              c.coords.lat
-                            }%2C${c.coords.lng}`}
+                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.05}%2C${c.coords.lat - 0.03}%2C${c.coords.lng + 0.05}%2C${c.coords.lat + 0.03}&layer=mapnik&marker=${c.coords.lat}%2C${c.coords.lng}`}
                           />
                         </div>
                       </div>
@@ -416,16 +348,16 @@ export default function Page() {
           )}
 
           {/* CASTROS */}
-          {activeSection === "castros" && (
+          {active === "castros" && (
             <Section
               title={menuLabel.castros}
               subtitle={
                 lang === "pt"
-                  ? "Conteúdo de exemplo. Quando tiveres a lista real, eu ajusto textos, mapas e fotografias."
-                  : "Sample content. When you have the real list, I’ll adapt texts, maps and photos."
+                  ? "Conteúdo de exemplo. Quando tiveres a lista real, ajusto textos, fotos e coordenadas."
+                  : "Sample content. When you have the real list, I’ll adapt texts, photos and coordinates."
               }
             >
-              <div className="grid-2">
+              <div className="grid cards">
                 {CASTROS.map((c) => (
                   <div key={c.id} className="card">
                     <div className="card-title-row">
@@ -433,23 +365,17 @@ export default function Page() {
                       <span className="badge">{c.minutes} min</span>
                     </div>
                     <div className="card-text">{c.snippet[lang]}</div>
-
                     <div className="card-sub">
-                      <span className="muted">{lang === "pt" ? "Nas proximidades: " : "Nearby: "}</span>
+                      <span style={{ color: "var(--muted)" }}>{lang === "pt" ? "Nas proximidades: " : "Nearby: "}</span>
                       {c.near[lang]}
                     </div>
-
                     <div className="mapbox">
                       <iframe
                         title={`map2-${c.id}`}
                         className="map"
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.05}%2C${
-                          c.coords.lat - 0.03
-                        }%2C${c.coords.lng + 0.05}%2C${c.coords.lat + 0.03}&layer=mapnik&marker=${
-                          c.coords.lat
-                        }%2C${c.coords.lng}`}
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.05}%2C${c.coords.lat - 0.03}%2C${c.coords.lng + 0.05}%2C${c.coords.lat + 0.03}&layer=mapnik&marker=${c.coords.lat}%2C${c.coords.lng}`}
                       />
                     </div>
                   </div>
@@ -459,16 +385,16 @@ export default function Page() {
           )}
 
           {/* ITINERARIOS */}
-          {activeSection === "itinerarios" && (
+          {active === "itinerarios" && (
             <Section
               title={menuLabel.itinerarios}
               subtitle={
                 lang === "pt"
-                  ? "Percursos prontos a usar (MVP). Posso adicionar filtros por tipo de viajante."
-                  : "Ready-to-use routes (MVP). I can add filters by traveler type."
+                  ? "Percursos prontos a usar (MVP). Podemos adicionar filtros (famílias, caminhantes, 2 dias, 5 dias)."
+                  : "Ready-to-use routes (MVP). We can add filters (families, hikers, 2 days, 5 days)."
               }
             >
-              <div className="grid">
+              <div className="grid cards">
                 <div className="card">
                   <div className="card-title-row">
                     <div className="card-title">{lang === "pt" ? "Fim de semana essencial" : "Essential weekend"}</div>
@@ -507,16 +433,16 @@ export default function Page() {
           )}
 
           {/* AGENDA */}
-          {activeSection === "agenda" && (
+          {active === "agenda" && (
             <Section
               title={menuLabel.agenda}
               subtitle={
                 lang === "pt"
-                  ? "Eventos de exemplo. O calendário no topo abre um modal para escolher datas."
-                  : "Sample events. The top calendar opens a modal to pick dates."
+                  ? "Eventos de exemplo. Usa o calendário no topo para escolher datas."
+                  : "Sample events. Use the top calendar to pick dates."
               }
             >
-              <div className="grid">
+              <div className="grid cards">
                 {EVENTS.sort((a, b) => (a.dateISO < b.dateISO ? -1 : 1)).map((e) => (
                   <div className="card" key={e.id}>
                     <div className="card-title-row">
@@ -532,16 +458,16 @@ export default function Page() {
           )}
 
           {/* PARCEIROS */}
-          {activeSection === "parceiros" && (
+          {active === "parceiros" && (
             <Section
               title={menuLabel.parceiros}
               subtitle={
                 lang === "pt"
-                  ? "MVP para parceiros (alojamento, restauração, museus). Depois ligamos a uma base de dados."
-                  : "MVP for partners (lodging, food, museums). Later we’ll connect to a database."
+                  ? "MVP para parceiros locais. Depois ligamos a dados reais (JSON/CMS)."
+                  : "MVP for local partners. Later we connect real data (JSON/CMS)."
               }
             >
-              <div className="grid">
+              <div className="grid cards">
                 <div className="card">
                   <div className="card-title-row">
                     <div className="card-title">{lang === "pt" ? "Casa da Serra" : "Casa da Serra"}</div>
@@ -582,16 +508,16 @@ export default function Page() {
           )}
 
           {/* EXPERIENCIAS */}
-          {activeSection === "experiencias" && (
+          {active === "experiencias" && (
             <Section
               title={menuLabel.experiencias}
               subtitle={
                 lang === "pt"
-                  ? "MVP com blocos prontos para evoluir para AR/3D (three.js / glTF / WebXR)."
-                  : "MVP blocks ready to evolve into AR/3D (three.js / glTF / WebXR)."
+                  ? "Blocos prontos para evoluir para AR/3D (three.js / glTF / WebXR)."
+                  : "Blocks ready to evolve into AR/3D (three.js / glTF / WebXR)."
               }
             >
-              <div className="grid">
+              <div className="grid cards">
                 <div className="card">
                   <div className="card-title-row">
                     <div className="card-title">{lang === "pt" ? "Reconstrução 3D" : "3D Reconstruction"}</div>
@@ -604,8 +530,8 @@ export default function Page() {
                   </div>
                   <div className="note">
                     {lang === "pt"
-                      ? "Próximo passo: carregar ficheiros glTF e renderizar em three.js."
-                      : "Next: load glTF files and render with three.js."}
+                      ? "Próximo passo: glTF + viewer (three.js)."
+                      : "Next: glTF + viewer (three.js)."}
                   </div>
                 </div>
 
@@ -617,7 +543,7 @@ export default function Page() {
                   <div className="card-text">
                     {lang === "pt"
                       ? "Ativa experiências por QR code e pontos de interesse."
-                      : "Trigger experiences by QR code and points of interest."}
+                      : "Trigger experiences via QR codes and POIs."}
                   </div>
                   <div className="note">
                     {lang === "pt"
@@ -638,8 +564,8 @@ export default function Page() {
                   </div>
                   <div className="note">
                     {lang === "pt"
-                      ? "Próximo passo: biblioteca de conteúdos multi-idioma."
-                      : "Next: multilingual content library."}
+                      ? "Próximo passo: biblioteca multi-idioma + áudio."
+                      : "Next: multilingual library + audio."}
                   </div>
                 </div>
               </div>
@@ -657,7 +583,7 @@ export default function Page() {
               </div>
 
               <div className="footer-right">
-                <button className="link" onClick={() => setActiveSection("home")}>
+                <button className="link" onClick={() => go("home")}>
                   {lang === "pt" ? "Voltar ao início" : "Back to home"}
                 </button>
               </div>
@@ -668,29 +594,19 @@ export default function Page() {
 
       {/* CALENDAR MODAL */}
       {calendarOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Calendário">
+        <div className="backdrop" role="dialog" aria-modal="true" aria-label="Calendário">
           <div className="modal">
             <div className="modal-head">
               <div>
                 <div className="modal-title">{lang === "pt" ? "Calendário" : "Calendar"}</div>
-                <div className="modal-sub">
-                  {lang === "pt"
-                    ? "Escolhe uma data para ver eventos."
-                    : "Pick a date to see events."}
-                </div>
+                <div className="modal-sub">{lang === "pt" ? "Escolhe uma data para ver eventos." : "Pick a date to see events."}</div>
               </div>
-              <button className="icon-close" onClick={() => setCalendarOpen(false)} aria-label="Fechar">
-                ✕
-              </button>
+              <button className="icon-close" onClick={() => setCalendarOpen(false)} aria-label="Fechar">✕</button>
             </div>
 
             <div className="chips">
               {eventDates.map((d) => (
-                <button
-                  key={d}
-                  className={`chip ${calendarDate === d ? "on" : ""}`}
-                  onClick={() => setCalendarDate(d)}
-                >
+                <button key={d} className={`chip ${calendarDate === d ? "on" : ""}`} onClick={() => setCalendarDate(d)}>
                   {formatDateISO(d, lang)}
                 </button>
               ))}
@@ -709,25 +625,15 @@ export default function Page() {
                     ))}
                   </div>
                 ) : (
-                  <div className="empty">
-                    {lang === "pt" ? "Sem eventos para este dia." : "No events on this date."}
-                  </div>
+                  <div className="empty">{lang === "pt" ? "Sem eventos para este dia." : "No events on this date."}</div>
                 )
               ) : (
-                <div className="empty">
-                  {lang === "pt" ? "Seleciona uma data acima." : "Select a date above."}
-                </div>
+                <div className="empty">{lang === "pt" ? "Seleciona uma data acima." : "Select a date above."}</div>
               )}
             </div>
 
             <div className="modal-foot">
-              <button
-                className="btn ghost"
-                onClick={() => {
-                  setCalendarOpen(false);
-                  setActiveSection("agenda");
-                }}
-              >
+              <button className="btn ghost" onClick={() => { setCalendarOpen(false); go("agenda"); }}>
                 {lang === "pt" ? "Abrir agenda" : "Open agenda"}
               </button>
               <button className="btn primary" onClick={() => setCalendarOpen(false)}>
@@ -737,19 +643,47 @@ export default function Page() {
           </div>
         </div>
       )}
+
+      {/* MOBILE DRAWER */}
+      {drawerOpen && (
+        <div className="backdrop" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="drawer">
+            <div className="drawer-head">
+              <div className="drawer-title">{lang === "pt" ? "Menu" : "Menu"}</div>
+              <button className="icon-close" onClick={() => setDrawerOpen(false)} aria-label="Fechar">✕</button>
+            </div>
+
+            <div className="drawer-list">
+              {navItems.map((it) => (
+                <button key={it.key} className="drawer-item" onClick={() => go(it.key)}>
+                  <div>
+                    <div style={{ fontWeight: 820, letterSpacing: "-.01em" }}>{it.label}</div>
+                    <div className="small">{it.hint}</div>
+                  </div>
+                  <div style={{ opacity: 0.8 }}>→</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="drawer-actions">
+              <button className="icon-btn" onClick={() => { setDrawerOpen(false); setCalendarOpen(true); }}>
+                <span className="icon">📅</span>
+                <span className="icon-btn-label">{lang === "pt" ? "Calendário" : "Calendar"}</span>
+              </button>
+
+              <div className="segmented" role="group" aria-label="Idioma">
+                <button className={`seg ${lang === "pt" ? "on" : ""}`} onClick={() => setLang("pt")}>PT</button>
+                <button className={`seg ${lang === "en" ? "on" : ""}`} onClick={() => setLang("en")}>EN</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
-function Section({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <section className="section">
       <div className="section-head">
@@ -761,17 +695,7 @@ function Section({
   );
 }
 
-function MenuCard({
-  icon,
-  title,
-  desc,
-  onClick,
-}: {
-  icon: string;
-  title: string;
-  desc: string;
-  onClick: () => void;
-}) {
+function MenuCard({ icon, title, desc, onClick }: { icon: string; title: string; desc: string; onClick: () => void }) {
   return (
     <button className="menu-card" onClick={onClick}>
       <div className="menu-ic">{icon}</div>
@@ -784,17 +708,7 @@ function MenuCard({
   );
 }
 
-function QuickCard({
-  icon,
-  title,
-  desc,
-  onClick,
-}: {
-  icon: string;
-  title: string;
-  desc: string;
-  onClick: () => void;
-}) {
+function QuickCard({ icon, title, desc, onClick }: { icon: string; title: string; desc: string; onClick: () => void }) {
   return (
     <button className="quick" onClick={onClick}>
       <div className="quick-ic">{icon}</div>
@@ -805,4 +719,3 @@ function QuickCard({
     </button>
   );
 }
-
