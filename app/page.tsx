@@ -413,11 +413,11 @@ export default function Page() {
                   <div className="stats">
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Rigor" : "Rigor"}</div>
-                      <div className="stat-v">{lang === "pt" ? "Leitura Arqueológica" : "archaeological reading"}</div>
+                      <div className="stat-v">{lang === "pt" ? "Leitura Arqueológica" : "Archaeological Reading"}</div>
                     </div>
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Planeamento" : "Planning"}</div>
-                      <div className="stat-v">{lang === "pt" ? "Itinerários + Agenda" : "itineraries + events"}</div>
+                      <div className="stat-v">{lang === "pt" ? "Itinerários + Agenda" : "Itineraries + Events"}</div>
                     </div>
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Imersão" : "Immersion"}</div>
