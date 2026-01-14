@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Lang = "pt" | "en";
 type SectionKey = "home" | "castros" | "itinerarios" | "agenda" | "parceiros" | "experiencias";
@@ -11,69 +11,171 @@ type EventItem = {
   title: Record<Lang, string>;
   location: Record<Lang, string>;
   description: Record<Lang, string>;
+  imageUrl?: string;
+  tags?: string[];
 };
 
 type Castro = {
   id: string;
   name: string;
+  place: string;
   minutes: number;
   snippet: Record<Lang, string>;
   near: Record<Lang, string>;
   coords: { lat: number; lng: number };
   imageUrl: string;
+  tags: Array<"panoramico" | "citânia" | "familias" | "caminhada" | "festival">;
+};
+
+type Itinerary = {
+  id: string;
+  title: Record<Lang, string>;
+  days: number;
+  vibe: Record<Lang, string>;
+  stops: string[];
+  tags: Array<"familias" | "caminhada" | "fimdesemana" | "multidias">;
 };
 
 const LOGO_URL = "https://i.imgur.com/0XqsDrg.png";
 
-const EVENTS: EventItem[] = [
+/** ✅ Fotos reais fornecidas por ti */
+const CASTROS: Castro[] = [
   {
-    id: "ev1",
-    dateISO: "2026-02-07",
-    title: { pt: "Visita guiada ao castro", en: "Guided visit to the hillfort" },
-    location: { pt: "Área interpretativa", en: "Interpretive area" },
-    description: {
-      pt: "Percurso com leitura de paisagem e contexto histórico.",
-      en: "A walk with landscape reading and historical context.",
+    id: "outeiro-lesenho",
+    name: "Outeiro Lesenho",
+    place: "Boticas",
+    minutes: 75,
+    snippet: {
+      pt: "Um dos pontos mais marcantes do Alto Tâmega. A implantação no relevo cria uma leitura poderosa da paisagem.",
+      en: "One of the most striking points in Alto Tâmega. Its hillside setting offers a powerful landscape reading.",
     },
+    near: { pt: "Miradouros naturais e trilhos curtos.", en: "Natural viewpoints and short trails." },
+    coords: { lat: 41.62, lng: -7.74 }, // approx (pode ajustar depois)
+    imageUrl: "https://i.imgur.com/xkz1Ihq.jpeg",
+    tags: ["panoramico", "caminhada"],
   },
   {
-    id: "ev2",
-    dateISO: "2026-03-21",
-    title: { pt: "Recriação histórica", en: "Historical reenactment" },
-    location: { pt: "Centro cultural local", en: "Local cultural center" },
-    description: {
-      pt: "Ofícios, alimentação e vida quotidiana em ambiente castrejo.",
-      en: "Crafts, food, and daily life in a hillfort atmosphere.",
+    id: "s-lourenco",
+    name: "Castro de S. Lourenço",
+    place: "Esposende",
+    minutes: 60,
+    snippet: {
+      pt: "Vista ampla sobre a costa e o estuário. Um lugar ideal para perceber a relação entre povoamento e território.",
+      en: "Wide views over the coast and estuary. A great place to understand settlement–territory relationships.",
     },
+    near: { pt: "Costa atlântica e percursos pedestres.", en: "Atlantic coast and walking routes." },
+    coords: { lat: 41.53, lng: -8.78 }, // approx
+    imageUrl: "https://i.imgur.com/LQ7BxgK.jpeg",
+    tags: ["panoramico", "familias"],
+  },
+  {
+    id: "briteiros",
+    name: "Citânia de Briteiros",
+    place: "Guimarães",
+    minutes: 120,
+    snippet: {
+      pt: "Referência maior da cultura castreja. Estruturas e percursos que tornam a visita quase inevitável.",
+      en: "A major reference of hillfort culture. Structures and routes that make the visit almost unavoidable.",
+    },
+    near: { pt: "Centro interpretativo e património de Guimarães.", en: "Interpretive center and Guimarães heritage." },
+    coords: { lat: 41.52, lng: -8.30 }, // approx
+    imageUrl: "https://i.imgur.com/Rb7ZCnJ.jpeg",
+    tags: ["citânia", "familias"],
+  },
+  {
+    id: "s-caetano",
+    name: "Castro de S. Caetano",
+    place: "Monção",
+    minutes: 80,
+    snippet: {
+      pt: "Um lugar de fronteira e de leitura histórica do Minho. Paisagem, memória e caminhada suave.",
+      en: "A frontier place for historical reading of Minho. Landscape, memory and a gentle walk.",
+    },
+    near: { pt: "Rio Minho, miradouros e enoturismo.", en: "Minho river, viewpoints and wine tourism." },
+    coords: { lat: 42.08, lng: -8.48 }, // approx
+    imageUrl: "https://i.imgur.com/o5ZJHg6.jpeg",
+    tags: ["panoramico", "caminhada"],
+  },
+  {
+    id: "sanfins",
+    name: "Citânia de Sanfins",
+    place: "Paços de Ferreira",
+    minutes: 110,
+    snippet: {
+      pt: "Grande escala e excelente perceção do traçado do povoado. Uma visita muito completa para especialistas e público geral.",
+      en: "Large scale and clear perception of the settlement layout. A complete visit for experts and the public alike.",
+    },
+    near: { pt: "Musealização e percursos de visita.", en: "Museum elements and visitor trails." },
+    coords: { lat: 41.28, lng: -8.36 }, // approx
+    imageUrl: "https://i.imgur.com/fXGeTMP.jpeg",
+    tags: ["citânia", "familias"],
+  },
+  {
+    id: "s-paio",
+    name: "Castro de São Paio",
+    place: "Vila do Conde",
+    minutes: 65,
+    snippet: {
+      pt: "Entre o interior e a influência atlântica, um ponto excelente para integrar na rota costeira.",
+      en: "Between inland and Atlantic influence, a strong point to integrate into a coastal route.",
+    },
+    near: { pt: "Património local e gastronomia.", en: "Local heritage and gastronomy." },
+    coords: { lat: 41.37, lng: -8.74 }, // approx
+    imageUrl: "https://i.imgur.com/Z9PK4AL.jpeg",
+    tags: ["familias"],
   },
 ];
 
-const CASTROS: Castro[] = [
+const EVENTS: EventItem[] = [
   {
-    id: "c1",
-    name: "Castro (exemplo) — Monte do Outeiro",
-    minutes: 60,
-    snippet: {
-      pt: "Povoado fortificado com leitura clara da implantação na paisagem.",
-      en: "Fortified settlement with a clear reading of its landscape setting.",
+    id: "ev-galaicofolia",
+    dateISO: "2026-08-01",
+    title: { pt: "Galaicofolia", en: "Galaicofolia" },
+    location: { pt: "Esposende", en: "Esposende" },
+    description: {
+      pt: "Festival com recriações, gastronomia e cultura castreja em ambiente imersivo.",
+      en: "A festival with reenactments, gastronomy and hillfort culture in an immersive atmosphere.",
     },
-    near: { pt: "Trilho panorâmico e miradouro.", en: "Scenic trail and viewpoint." },
-    coords: { lat: 41.55, lng: -8.42 },
-    imageUrl:
-      "https://images.unsplash.com/photo-1526772662000-3f88f10405ff?auto=format&fit=crop&w=1600&q=60",
+    imageUrl: "https://i.imgur.com/GGZBYum.jpeg",
+    tags: ["festival", "recriacao"],
   },
   {
-    id: "c2",
-    name: "Castro (exemplo) — Cividade do Vale",
-    minutes: 90,
-    snippet: {
-      pt: "Percurso de visita com pontos de interpretação e áreas de observação.",
-      en: "Visitor route with interpretation points and observation areas.",
+    id: "ev-visita",
+    dateISO: "2026-03-21",
+    title: { pt: "Visita interpretativa", en: "Interpretive visit" },
+    location: { pt: "Citânia (programa)", en: "Citânia (program)" },
+    description: {
+      pt: "Percurso com leitura de paisagem, técnicas construtivas e quotidiano castrejo.",
+      en: "A route focusing on landscape reading, building techniques and daily life.",
     },
-    near: { pt: "Museu local e gastronomia.", en: "Local museum and gastronomy." },
-    coords: { lat: 41.62, lng: -8.30 },
-    imageUrl:
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=60",
+    tags: ["visita", "interpretacao"],
+  },
+];
+
+const ITINERARIES: Itinerary[] = [
+  {
+    id: "weekend-essencial",
+    title: { pt: "Fim de semana essencial", en: "Essential weekend" },
+    days: 2,
+    vibe: { pt: "Uma síntese elegante: citânias + miradouros + gastronomia.", en: "An elegant synthesis: citânias + viewpoints + gastronomy." },
+    stops: ["Citânia de Briteiros", "Citânia de Sanfins", "Castro de S. Lourenço", "Momento gastronómico local"],
+    tags: ["fimdesemana", "familias"],
+  },
+  {
+    id: "costa-e-territorio",
+    title: { pt: "Costa & território", en: "Coast & territory" },
+    days: 1,
+    vibe: { pt: "Leve e panorâmico. Ótimo para famílias.", en: "Light and panoramic. Great for families." },
+    stops: ["Castro de S. Lourenço", "Castro de São Paio", "Passeio costeiro"],
+    tags: ["familias"],
+  },
+  {
+    id: "caminhante-minho",
+    title: { pt: "Caminhante do Minho", en: "Minho hiker" },
+    days: 2,
+    vibe: { pt: "Ritmo de caminhada e paisagem com leitura arqueológica.", en: "Walking rhythm and landscape with archaeological reading." },
+    stops: ["Castro de S. Caetano", "Outeiro Lesenho", "Miradouros e trilhos"],
+    tags: ["caminhada", "fimdesemana"],
   },
 ];
 
@@ -82,6 +184,10 @@ function formatDateISO(iso: string, lang: Lang) {
   const [y, m, d] = iso.split("-").map((n) => Number(n));
   const dt = new Date(Date.UTC(y, m - 1, d));
   return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "long", year: "numeric" }).format(dt);
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
 export default function Page() {
@@ -93,6 +199,35 @@ export default function Page() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Premium: search + filters
+  const [search, setSearch] = useState("");
+  const [castroFilter, setCastroFilter] = useState<"todos" | "citânia" | "panoramico" | "familias" | "caminhada">("todos");
+
+  // Hero carousel (cinematic)
+  const heroSlides = useMemo(() => {
+    // usa fotos reais (e também a Galaicofolia como “cultura viva”)
+    return [
+      { key: "briteiros", title: "Citânia de Briteiros", sub: "Guimarães", img: "https://i.imgur.com/Rb7ZCnJ.jpeg", chip: lang === "pt" ? "Referência maior" : "Key reference" },
+      { key: "lourenco", title: "Castro de S. Lourenço", sub: "Esposende", img: "https://i.imgur.com/LQ7BxgK.jpeg", chip: lang === "pt" ? "Costa & estuário" : "Coast & estuary" },
+      { key: "sanfins", title: "Citânia de Sanfins", sub: "Paços de Ferreira", img: "https://i.imgur.com/fXGeTMP.jpeg", chip: lang === "pt" ? "Leitura do traçado" : "Clear layout" },
+      { key: "galaico", title: "Galaicofolia", sub: "Esposende", img: "https://i.imgur.com/GGZBYum.jpeg", chip: lang === "pt" ? "Cultura viva" : "Living culture" },
+    ];
+  }, [lang]);
+
+  const [heroIndex, setHeroIndex] = useState(0);
+  const heroTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    // autoplay suave, mas sem “stress”
+    if (heroTimer.current) window.clearInterval(heroTimer.current);
+    heroTimer.current = window.setInterval(() => {
+      setHeroIndex((i) => (i + 1) % heroSlides.length);
+    }, 5500);
+    return () => {
+      if (heroTimer.current) window.clearInterval(heroTimer.current);
+    };
+  }, [heroSlides.length]);
+
   const copy = useMemo(() => {
     return {
       title: {
@@ -100,14 +235,14 @@ export default function Page() {
         en: "Hillfort Route of Northwest Portugal",
       },
       subtitle: {
-        pt: "Arqueologia e paisagem, com uma camada digital moderna para planear, descobrir e viver o território.",
-        en: "Archaeology and landscape, with a modern digital layer to plan, discover and experience the territory.",
+        pt: "Uma webapp editorial e imersiva para explorar a cultura castreja — com rigor, beleza e utilidade em viagem.",
+        en: "An editorial, immersive webapp to explore hillfort culture — with rigor, beauty and travel utility.",
       },
       menu: {
         pt: {
           home: "Início",
-          castros: "Castros a Visitar",
-          itinerarios: "Itinerários",
+          castros: "Castros a visitar",
+          itinerarios: "Itinerários sugeridos",
           agenda: "O que está a acontecer",
           parceiros: "Onde ficar e o que provar",
           experiencias: "Experiências imersivas",
@@ -115,32 +250,32 @@ export default function Page() {
         en: {
           home: "Home",
           castros: "Hillforts",
-          itinerarios: "Itineraries",
+          itinerarios: "Suggested itineraries",
           agenda: "What’s on",
           parceiros: "Stay & Taste",
-          experiencias: "Immersive",
+          experiencias: "Immersive experiences",
         },
       },
       cards: {
         castros: {
-          pt: "Descrições, fotografias, mapas, tempos de visita e o que ver nas proximidades.",
-          en: "Descriptions, photos, maps, visit times and nearby highlights.",
+          pt: "Fotografias reais, leitura de paisagem, tempos de visita e mapa. Conteúdo pronto para crescer.",
+          en: "Real photos, landscape reading, visit times and map. Ready to scale.",
         },
         itinerarios: {
-          pt: "Percursos prontos para famílias, caminhantes, fins de semana e viagens longas.",
-          en: "Ready routes for families, hikers, weekend and multi-day trips.",
+          pt: "Percursos prontos para famílias, caminhada e fim de semana — com equilíbrio entre cultura e descanso.",
+          en: "Routes for families, hiking and weekends — balancing culture and rest.",
         },
         agenda: {
-          pt: "Agenda de eventos, recriações, festivais e visitas encenadas.",
-          en: "Events calendar, reenactments, festivals and guided experiences.",
+          pt: "Eventos e festivais para planear a visita e sentir a cultura viva.",
+          en: "Events and festivals to plan your visit and feel living culture.",
         },
         parceiros: {
-          pt: "Alojamento, restauração, museus e serviços — a oferta local em destaque.",
-          en: "Lodging, food, museums and services — local offer curated.",
+          pt: "A oferta local ao longo da rota: dormir, comer, museus e serviços.",
+          en: "Local offer along the route: sleep, eat, museums and services.",
         },
         experiencias: {
-          pt: "AR/3D para “viajar no tempo” e ver os castros como eram.",
-          en: "AR/3D to “travel in time” and see hillforts as they were.",
+          pt: "Uma base sólida para AR/3D e histórias por camadas (MVP com visão).",
+          en: "A solid base for AR/3D and layered storytelling (MVP with vision).",
         },
       },
       ctaPrimary: { pt: "Explorar castros", en: "Explore hillforts" },
@@ -155,8 +290,8 @@ export default function Page() {
     { key: "castros", label: menuLabel.castros, hint: lang === "pt" ? "Locais e mapas" : "Places & maps" },
     { key: "itinerarios", label: menuLabel.itinerarios, hint: lang === "pt" ? "Percursos prontos" : "Ready routes" },
     { key: "agenda", label: menuLabel.agenda, hint: lang === "pt" ? "Eventos e datas" : "Events & dates" },
-    { key: "parceiros", label: menuLabel.parceiros, hint: lang === "pt" ? "Onde ficar e comer" : "Stay & taste" },
-    { key: "experiencias", label: menuLabel.experiencias, hint: lang === "pt" ? "AR / 3D" : "AR / 3D" },
+    { key: "parceiros", label: menuLabel.parceiros, hint: lang === "pt" ? "Dormir e provar" : "Stay & taste" },
+    { key: "experiencias", label: menuLabel.experiencias, hint: lang === "pt" ? "AR / histórias" : "AR / stories" },
   ];
 
   const eventDates = useMemo(() => Array.from(new Set(EVENTS.map((e) => e.dateISO))).sort(), []);
@@ -165,8 +300,33 @@ export default function Page() {
   function go(to: SectionKey) {
     setActive(to);
     setDrawerOpen(false);
-    // scroll topo (suave)
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  const filteredCastros = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return CASTROS.filter((c) => {
+      const matchText =
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        c.place.toLowerCase().includes(q) ||
+        c.snippet.pt.toLowerCase().includes(q) ||
+        c.snippet.en.toLowerCase().includes(q);
+
+      const matchTag = castroFilter === "todos" ? true : c.tags.includes(castroFilter);
+      return matchText && matchTag;
+    });
+  }, [search, castroFilter]);
+
+  function tagLabel(t: Castro["tags"][number]) {
+    const map: Record<string, Record<Lang, string>> = {
+      "citânia": { pt: "Citânia", en: "Citânia" },
+      "panoramico": { pt: "Panorâmico", en: "Panoramic" },
+      "familias": { pt: "Famílias", en: "Families" },
+      "caminhada": { pt: "Caminhada", en: "Hiking" },
+      "festival": { pt: "Festival", en: "Festival" },
+    };
+    return map[t]?.[lang] ?? t;
   }
 
   return (
@@ -184,7 +344,10 @@ export default function Page() {
             <img src={LOGO_URL} alt="Logo" className="brand-logo" />
             <div className="brand-text">
               <div className="brand-title">{copy.title[lang]}</div>
-              <div className="brand-sub">{lang === "pt" ? "Arqueologia elegante, viagem moderna" : "Elegant archaeology, modern travel"}</div>
+              <div className="brand-sub">
+                <span>⟡</span>
+                {lang === "pt" ? "Arqueologia elegante • webapp contemporânea" : "Elegant archaeology • contemporary webapp"}
+              </div>
             </div>
           </button>
 
@@ -215,7 +378,6 @@ export default function Page() {
               </button>
             </div>
 
-            {/* Mobile menu */}
             <button className="hamburger" onClick={() => setDrawerOpen(true)} aria-label="Abrir menu">
               ☰
             </button>
@@ -250,41 +412,74 @@ export default function Page() {
 
                   <div className="stats">
                     <div className="stat">
-                      <div className="stat-k">{lang === "pt" ? "Descoberta" : "Discovery"}</div>
-                      <div className="stat-v">{lang === "pt" ? "castros e paisagem" : "hillforts & landscape"}</div>
+                      <div className="stat-k">{lang === "pt" ? "Rigor" : "Rigor"}</div>
+                      <div className="stat-v">{lang === "pt" ? "leitura arqueológica" : "archaeological reading"}</div>
                     </div>
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Planeamento" : "Planning"}</div>
-                      <div className="stat-v">{lang === "pt" ? "itinerários e agenda" : "itineraries & events"}</div>
+                      <div className="stat-v">{lang === "pt" ? "itinerários + agenda" : "itineraries + events"}</div>
                     </div>
                     <div className="stat">
                       <div className="stat-k">{lang === "pt" ? "Imersão" : "Immersion"}</div>
-                      <div className="stat-v">{lang === "pt" ? "AR/3D (MVP)" : "AR/3D (MVP)"}</div>
+                      <div className="stat-v">{lang === "pt" ? "AR/3D (roadmap)" : "AR/3D (roadmap)"}</div>
                     </div>
                   </div>
                 </div>
 
+                {/* Cinematic card with slides */}
                 <div className="hero-card">
                   <div className="hero-media">
                     <img
                       className="hero-img"
-                      alt={lang === "pt" ? "Paisagem (imagem ilustrativa)" : "Landscape (illustrative)"}
-                      src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1800&q=60"
+                      alt={lang === "pt" ? "Imagem de capa" : "Cover image"}
+                      src={heroSlides[heroIndex].img}
                     />
                     <div className="hero-overlay" />
+                    <div className="hero-frame" />
+
+                    <div className="hero-caption">
+                      <div className="hero-cap-left">
+                        <div className="hero-cap-title">{heroSlides[heroIndex].title}</div>
+                        <div className="hero-cap-sub">{heroSlides[heroIndex].sub}</div>
+                      </div>
+                      <div className="hero-cap-chip">✦ {heroSlides[heroIndex].chip}</div>
+                    </div>
                   </div>
 
                   <div className="hero-card-body">
                     <div className="hero-mini">
                       <div className="mini-title">{lang === "pt" ? "Começa por aqui" : "Start here"}</div>
-                      <div className="mini-sub">{lang === "pt" ? "Escolhe um caminho." : "Pick a path."}</div>
+                      <div className="mini-sub">
+                        {lang === "pt"
+                          ? "Explora castros reais com fotografia e contexto. Depois planeia com itinerários."
+                          : "Explore real hillforts with photo and context. Then plan with itineraries."}
+                      </div>
                     </div>
 
                     <div className="quick-grid">
-                      <QuickCard icon="🏺" title={lang === "pt" ? "Castros" : "Hillforts"} desc={lang === "pt" ? "Locais e mapas" : "Places & maps"} onClick={() => go("castros")} />
+                      <QuickCard icon="🏺" title={lang === "pt" ? "Castros" : "Hillforts"} desc={lang === "pt" ? "Fotografia e mapa" : "Photo & map"} onClick={() => go("castros")} />
                       <QuickCard icon="🧭" title={lang === "pt" ? "Itinerários" : "Itineraries"} desc={lang === "pt" ? "Percursos prontos" : "Ready routes"} onClick={() => go("itinerarios")} />
                       <QuickCard icon="🎭" title={lang === "pt" ? "Agenda" : "What’s on"} desc={lang === "pt" ? "Eventos e datas" : "Events & dates"} onClick={() => go("agenda")} />
-                      <QuickCard icon="✨" title={lang === "pt" ? "Imersivo" : "Immersive"} desc={lang === "pt" ? "AR/3D (MVP)" : "AR/3D (MVP)"} onClick={() => go("experiencias")} />
+                      <QuickCard icon="✨" title={lang === "pt" ? "Imersivo" : "Immersive"} desc={lang === "pt" ? "AR/3D roadmap" : "AR/3D roadmap"} onClick={() => go("experiencias")} />
+                    </div>
+
+                    {/* Slide dots */}
+                    <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                      {heroSlides.map((s, idx) => (
+                        <button
+                          key={s.key}
+                          onClick={() => setHeroIndex(idx)}
+                          aria-label={`Slide ${idx + 1}`}
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: 999,
+                            border: "1px solid rgba(176,141,87,.25)",
+                            background: idx === heroIndex ? "rgba(17,24,39,.92)" : "rgba(255,255,255,.75)",
+                            cursor: "pointer",
+                          }}
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -292,10 +487,10 @@ export default function Page() {
 
               <section className="section">
                 <div className="section-head">
-                  <h2 className="h2">{lang === "pt" ? "Menu principal" : "Main menu"}</h2>
-                  <p className="muted">
-                    {lang === "pt" ? "Uma experiência moderna com alma arqueológica." : "A modern experience with an archaeological soul."}
-                  </p>
+                  <div className="section-head-left">
+                    <h2 className="h2">{lang === "pt" ? "Menu principal" : "Main menu"}</h2>
+                    <p className="muted">{lang === "pt" ? "Uma experiência moderna com alma arqueológica." : "A modern experience with an archaeological soul."}</p>
+                  </div>
                 </div>
 
                 <div className="grid">
@@ -309,38 +504,19 @@ export default function Page() {
 
               <section className="section">
                 <div className="section-head">
-                  <h2 className="h2">{lang === "pt" ? "Em destaque" : "Featured"}</h2>
-                  <p className="muted">{lang === "pt" ? "Exemplos para validar estilo e estrutura." : "Samples to validate style and structure."}</p>
+                  <div className="section-head-left">
+                    <h2 className="h2">{lang === "pt" ? "Em destaque" : "Featured"}</h2>
+                    <p className="muted">
+                      {lang === "pt"
+                        ? "Seleção inicial com fotografia real. Pronto para crescer com conteúdos científicos e camadas interpretativas."
+                        : "Initial selection with real photography. Ready to grow with scientific content and interpretive layers."}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid-2">
-                  {CASTROS.map((c) => (
-                    <div key={c.id} className="feature">
-                      <div className="feature-media">
-                        <img className="feature-img" src={c.imageUrl} alt={c.name} />
-                      </div>
-                      <div className="feature-body">
-                        <div className="feature-top">
-                          <div className="feature-title">{c.name}</div>
-                          <span className="badge">{c.minutes} min</span>
-                        </div>
-                        <div className="feature-text">{c.snippet[lang]}</div>
-                        <div className="feature-sub">
-                          <span style={{ color: "var(--muted)" }}>{lang === "pt" ? "Nas proximidades: " : "Nearby: "}</span>
-                          {c.near[lang]}
-                        </div>
-
-                        <div className="mapbox">
-                          <iframe
-                            title={`map-${c.id}`}
-                            className="map"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.05}%2C${c.coords.lat - 0.03}%2C${c.coords.lng + 0.05}%2C${c.coords.lat + 0.03}&layer=mapnik&marker=${c.coords.lat}%2C${c.coords.lng}`}
-                          />
-                        </div>
-                      </div>
-                    </div>
+                  {CASTROS.slice(0, 4).map((c) => (
+                    <FeatureCastro key={c.id} castro={c} lang={lang} onOpen={() => { setActive("castros"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
                   ))}
                 </div>
               </section>
@@ -353,30 +529,69 @@ export default function Page() {
               title={menuLabel.castros}
               subtitle={
                 lang === "pt"
-                  ? "Conteúdo de exemplo. Quando tiveres a lista real, ajusto textos, fotos e coordenadas."
-                  : "Sample content. When you have the real list, I’ll adapt texts, photos and coordinates."
+                  ? "Pesquisa e filtra para planear a visita. Este é um MVP com fotografia real e estrutura pronta para dados científicos."
+                  : "Search and filter to plan your visit. This is an MVP with real photography and a structure ready for scientific data."
+              }
+              tools={
+                <div className="section-tools">
+                  <div className="search" role="search">
+                    <span style={{ fontSize: 14 }}>⌕</span>
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={lang === "pt" ? "Procurar castro, localidade…" : "Search hillfort, place…"}
+                      aria-label={lang === "pt" ? "Pesquisar" : "Search"}
+                    />
+                    <span className="k">⌘ K</span>
+                  </div>
+                </div>
               }
             >
+              <div className="filters" style={{ marginBottom: 12 }}>
+                <Filter label={lang === "pt" ? "Todos" : "All"} on={castroFilter === "todos"} onClick={() => setCastroFilter("todos")} />
+                <Filter label={lang === "pt" ? "Citânias" : "Citânias"} on={castroFilter === "citânia"} onClick={() => setCastroFilter("citânia")} />
+                <Filter label={lang === "pt" ? "Panorâmicos" : "Panoramic"} on={castroFilter === "panoramico"} onClick={() => setCastroFilter("panoramico")} />
+                <Filter label={lang === "pt" ? "Famílias" : "Families"} on={castroFilter === "familias"} onClick={() => setCastroFilter("familias")} />
+                <Filter label={lang === "pt" ? "Caminhada" : "Hiking"} on={castroFilter === "caminhada"} onClick={() => setCastroFilter("caminhada")} />
+              </div>
+
               <div className="grid cards">
-                {CASTROS.map((c) => (
-                  <div key={c.id} className="card">
-                    <div className="card-title-row">
-                      <div className="card-title">{c.name}</div>
-                      <span className="badge">{c.minutes} min</span>
+                {filteredCastros.map((c) => (
+                  <div key={c.id} className="feature">
+                    <div className="feature-media">
+                      <img className="feature-img" src={c.imageUrl} alt={`${c.name} — ${c.place}`} />
+                      <div className="feature-grad" />
                     </div>
-                    <div className="card-text">{c.snippet[lang]}</div>
-                    <div className="card-sub">
-                      <span style={{ color: "var(--muted)" }}>{lang === "pt" ? "Nas proximidades: " : "Nearby: "}</span>
-                      {c.near[lang]}
-                    </div>
-                    <div className="mapbox">
-                      <iframe
-                        title={`map2-${c.id}`}
-                        className="map"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.05}%2C${c.coords.lat - 0.03}%2C${c.coords.lng + 0.05}%2C${c.coords.lat + 0.03}&layer=mapnik&marker=${c.coords.lat}%2C${c.coords.lng}`}
-                      />
+                    <div className="feature-body">
+                      <div className="feature-top">
+                        <div className="feature-title">{c.name}</div>
+                        <span className="badge">{c.minutes} min</span>
+                      </div>
+                      <div className="card-sub">{c.place}</div>
+
+                      <div className="feature-text">{c.snippet[lang]}</div>
+
+                      <div className="meta">
+                        {c.tags.slice(0, 3).map((t) => (
+                          <span key={t} className="pill2">✦ {tagLabel(t)}</span>
+                        ))}
+                        <span className="pill2">🗺️ {lang === "pt" ? "Mapa" : "Map"}</span>
+                      </div>
+
+                      <div className="feature-sub">
+                        <span style={{ color: "var(--muted)" }}>{lang === "pt" ? "Nas proximidades: " : "Nearby: "}</span>
+                        {c.near[lang]}
+                      </div>
+
+                      <div className="mapbox">
+                        <iframe
+                          title={`map-${c.id}`}
+                          className="map"
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${c.coords.lng - 0.06}%2C${c.coords.lat - 0.035}%2C${c.coords.lng + 0.06}%2C${c.coords.lat + 0.035}&layer=mapnik&marker=${c.coords.lat}%2C${c.coords.lng}`}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -390,44 +605,52 @@ export default function Page() {
               title={menuLabel.itinerarios}
               subtitle={
                 lang === "pt"
-                  ? "Percursos prontos a usar (MVP). Podemos adicionar filtros (famílias, caminhantes, 2 dias, 5 dias)."
-                  : "Ready-to-use routes (MVP). We can add filters (families, hikers, 2 days, 5 days)."
+                  ? "Percursos prontos, com critérios claros. (MVP) — a seguir: distância, tempo total e acessibilidade."
+                  : "Ready routes with clear criteria. (MVP) — next: distance, total time and accessibility."
               }
             >
               <div className="grid cards">
-                <div className="card">
-                  <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Fim de semana essencial" : "Essential weekend"}</div>
-                    <span className="badge">{lang === "pt" ? "2 dias" : "2 days"}</span>
+                {ITINERARIES.map((it) => (
+                  <div className="card" key={it.id}>
+                    <div className="card-title-row">
+                      <div className="card-title">{it.title[lang]}</div>
+                      <span className="badge">{it.days} {lang === "pt" ? "dia(s)" : "day(s)"}</span>
+                    </div>
+                    <div className="card-text">{it.vibe[lang]}</div>
+                    <div className="meta">
+                      {it.tags.map((t) => (
+                        <span key={t} className="pill2">
+                          {t === "familias" ? "👨‍👩‍👧‍👦" : t === "caminhada" ? "🥾" : t === "fimdesemana" ? "🗓️" : "🧳"}{" "}
+                          {lang === "pt"
+                            ? t === "familias"
+                              ? "Famílias"
+                              : t === "caminhada"
+                              ? "Caminhada"
+                              : t === "fimdesemana"
+                              ? "Fim de semana"
+                              : "Vários dias"
+                            : t === "familias"
+                            ? "Families"
+                            : t === "caminhada"
+                            ? "Hiking"
+                            : t === "fimdesemana"
+                            ? "Weekend"
+                            : "Multi-day"}
+                        </span>
+                      ))}
+                    </div>
+                    <ul className="list">
+                      {it.stops.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                    <div className="note">
+                      {lang === "pt"
+                        ? "Próximo passo: gerar este percurso no mapa e exportar para partilha."
+                        : "Next: generate this route on the map and export for sharing."}
+                    </div>
                   </div>
-                  <div className="card-text">
-                    {lang === "pt"
-                      ? "Combina castros, paisagem e um momento de gastronomia local."
-                      : "Combines hillforts, landscape and a local food moment."}
-                  </div>
-                  <ul className="list">
-                    <li>Castro (exemplo) — Monte do Outeiro</li>
-                    <li>Cividade do Vale</li>
-                    <li>{lang === "pt" ? "Museu + prova gastronómica" : "Museum + tasting"}</li>
-                  </ul>
-                </div>
-
-                <div className="card">
-                  <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Famílias e descoberta" : "Families & discovery"}</div>
-                    <span className="badge">{lang === "pt" ? "1 dia" : "1 day"}</span>
-                  </div>
-                  <div className="card-text">
-                    {lang === "pt"
-                      ? "Ritmo leve com conteúdos para crianças e paragens confortáveis."
-                      : "Easy pace with kid-friendly content and comfortable stops."}
-                  </div>
-                  <ul className="list">
-                    <li>{lang === "pt" ? "Visita curta a um castro" : "Short hillfort visit"}</li>
-                    <li>{lang === "pt" ? "Centro interpretativo" : "Interpretive center"}</li>
-                    <li>{lang === "pt" ? "Atividade lúdica" : "Hands-on activity"}</li>
-                  </ul>
-                </div>
+                ))}
               </div>
             </Section>
           )}
@@ -438,8 +661,8 @@ export default function Page() {
               title={menuLabel.agenda}
               subtitle={
                 lang === "pt"
-                  ? "Eventos de exemplo. Usa o calendário no topo para escolher datas."
-                  : "Sample events. Use the top calendar to pick dates."
+                  ? "Uma agenda que cruza arqueologia e cultura viva. Usa o calendário no topo para selecionar datas."
+                  : "An agenda that crosses archaeology and living culture. Use the top calendar to select dates."
               }
             >
               <div className="grid cards">
@@ -450,7 +673,21 @@ export default function Page() {
                       <span className="badge">{formatDateISO(e.dateISO, lang)}</span>
                     </div>
                     <div className="card-sub">{e.location[lang]}</div>
+
+                    {e.imageUrl && (
+                      <div style={{ marginTop: 12, borderRadius: 18, overflow: "hidden", border: "1px solid rgba(176,141,87,.16)" }}>
+                        <img src={e.imageUrl} alt={e.title[lang]} style={{ width: "100%", height: 210, objectFit: "cover" }} />
+                      </div>
+                    )}
+
                     <div className="card-text">{e.description[lang]}</div>
+                    {e.tags?.length ? (
+                      <div className="meta">
+                        {e.tags.slice(0, 4).map((t) => (
+                          <span key={t} className="pill2">✦ {t}</span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -463,46 +700,38 @@ export default function Page() {
               title={menuLabel.parceiros}
               subtitle={
                 lang === "pt"
-                  ? "MVP para parceiros locais. Depois ligamos a dados reais (JSON/CMS)."
-                  : "MVP for local partners. Later we connect real data (JSON/CMS)."
+                  ? "Curadoria de parceiros ao longo da rota. (MVP) — a seguir: mapa por proximidade e reservas."
+                  : "Curated partners along the route. (MVP) — next: proximity map and bookings."
               }
             >
               <div className="grid cards">
-                <div className="card">
-                  <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Casa da Serra" : "Casa da Serra"}</div>
-                    <span className="badge">{lang === "pt" ? "Alojamento" : "Lodging"}</span>
-                  </div>
-                  <div className="card-text">
-                    {lang === "pt"
-                      ? "Base confortável para explorar a rota com tranquilidade."
-                      : "A comfortable base to explore the route with ease."}
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Sabores do Castro" : "Hillfort Flavors"}</div>
-                    <span className="badge">{lang === "pt" ? "Restauração" : "Restaurant"}</span>
-                  </div>
-                  <div className="card-text">
-                    {lang === "pt"
-                      ? "Cozinha local inspirada no território e nos produtos sazonais."
-                      : "Local cuisine inspired by the territory and seasonal produce."}
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Museu (exemplo)" : "Museum (sample)"}</div>
-                    <span className="badge">{lang === "pt" ? "Cultura" : "Culture"}</span>
-                  </div>
-                  <div className="card-text">
-                    {lang === "pt"
-                      ? "Contexto arqueológico e narrativas para enriquecer a visita."
-                      : "Archaeological context and narratives to enrich the visit."}
-                  </div>
-                </div>
+                <PartnerCard
+                  title={lang === "pt" ? "Alojamento de referência" : "Signature lodging"}
+                  badge={lang === "pt" ? "Dormir" : "Stay"}
+                  text={
+                    lang === "pt"
+                      ? "Uma base confortável e serena para explorar o território. Integrações futuras: disponibilidade e reservas."
+                      : "A comfortable, serene base to explore. Future: availability and booking integrations."
+                  }
+                />
+                <PartnerCard
+                  title={lang === "pt" ? "Gastronomia do território" : "Territory cuisine"}
+                  badge={lang === "pt" ? "Provar" : "Taste"}
+                  text={
+                    lang === "pt"
+                      ? "Produtos locais, sazonalidade e identidade. Próximo passo: roteiros gastronómicos por itinerário."
+                      : "Local produce, seasonality and identity. Next: gastronomy routes per itinerary."
+                  }
+                />
+                <PartnerCard
+                  title={lang === "pt" ? "Museus e interpretação" : "Museums & interpretation"}
+                  badge={lang === "pt" ? "Cultura" : "Culture"}
+                  text={
+                    lang === "pt"
+                      ? "Contexto científico e leitura do património. Próximo passo: conteúdos por camadas e bibliografia."
+                      : "Scientific context and heritage reading. Next: layered content and bibliography."
+                  }
+                />
               </div>
             </Section>
           )}
@@ -513,59 +742,64 @@ export default function Page() {
               title={menuLabel.experiencias}
               subtitle={
                 lang === "pt"
-                  ? "Blocos prontos para evoluir para AR/3D (three.js / glTF / WebXR)."
-                  : "Blocks ready to evolve into AR/3D (three.js / glTF / WebXR)."
+                  ? "Uma visão credível para AR/3D: rigor, contexto e emoção — sem infantilizar a ciência."
+                  : "A credible AR/3D vision: rigor, context and emotion — without trivializing science."
               }
             >
               <div className="grid cards">
                 <div className="card">
                   <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Reconstrução 3D" : "3D Reconstruction"}</div>
-                    <span className="badge">MVP</span>
+                    <div className="card-title">{lang === "pt" ? "Camadas de tempo" : "Layers of time"}</div>
+                    <span className="badge">Roadmap</span>
                   </div>
                   <div className="card-text">
                     {lang === "pt"
-                      ? "Visualiza o castro “como era” com modelos 3D por local."
-                      : "See the hillfort “as it was” with per-location 3D models."}
+                      ? "Desliza entre presente e passado: traçado, muralhas, unidades domésticas e pontos de atividade."
+                      : "Slide between present and past: layout, walls, domestic units and activity points."}
+                  </div>
+                  <div className="meta">
+                    <span className="pill2">🧱 {lang === "pt" ? "Técnicas" : "Techniques"}</span>
+                    <span className="pill2">📚 {lang === "pt" ? "Fontes" : "Sources"}</span>
+                    <span className="pill2">🎧 {lang === "pt" ? "Áudio" : "Audio"}</span>
                   </div>
                   <div className="note">
                     {lang === "pt"
-                      ? "Próximo passo: glTF + viewer (three.js)."
-                      : "Next: glTF + viewer (three.js)."}
+                      ? "MVP realista: começar com hotspots, texto curto e visualizações 2D. Depois: 3D glTF."
+                      : "Realistic MVP: start with hotspots, short text and 2D visualizations. Then: 3D glTF."}
                   </div>
                 </div>
 
                 <div className="card">
                   <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "AR no local" : "On-site AR"}</div>
+                    <div className="card-title">{lang === "pt" ? "AR no local (QR)" : "On-site AR (QR)"}</div>
                     <span className="badge">MVP</span>
                   </div>
                   <div className="card-text">
                     {lang === "pt"
-                      ? "Ativa experiências por QR code e pontos de interesse."
-                      : "Trigger experiences via QR codes and POIs."}
+                      ? "Pontos de interesse ativados por QR: reconstituição de muralha, habitação, objetos e rituais."
+                      : "QR-triggered POIs: wall reconstruction, housing, objects and rituals."}
                   </div>
                   <div className="note">
                     {lang === "pt"
-                      ? "Próximo passo: WebXR (onde suportado) + fallback 2D."
-                      : "Next: WebXR (where supported) + 2D fallback."}
+                      ? "Estratégia: WebXR onde suportado, fallback para viewer 3D e storytelling."
+                      : "Strategy: WebXR where supported, fallback to 3D viewer and storytelling."}
                   </div>
                 </div>
 
                 <div className="card">
                   <div className="card-title-row">
-                    <div className="card-title">{lang === "pt" ? "Histórias e objetos" : "Stories & objects"}</div>
-                    <span className="badge">MVP</span>
+                    <div className="card-title">{lang === "pt" ? "Guia científico (micro)" : "Scientific guide (micro)"}</div>
+                    <span className="badge alt">{lang === "pt" ? "Rigor" : "Rigor"}</span>
                   </div>
                   <div className="card-text">
                     {lang === "pt"
-                      ? "Hotspots com áudio, texto curto e mini-narrativas."
-                      : "Hotspots with audio, short text and mini narratives."}
+                      ? "Fichas curtas e bibliografia essencial por castro: cronologia, materiais, escavações e leituras."
+                      : "Short sheets and essential bibliography per hillfort: chronology, materials, excavations and readings."}
                   </div>
                   <div className="note">
                     {lang === "pt"
-                      ? "Próximo passo: biblioteca multi-idioma + áudio."
-                      : "Next: multilingual library + audio."}
+                      ? "Próximo passo: modelos de dados + fontes (autores, anos, links) e revisão por equipa científica."
+                      : "Next: data models + sources (authors, years, links) and review by a scientific team."}
                   </div>
                 </div>
               </div>
@@ -578,7 +812,7 @@ export default function Page() {
                 <img className="footer-logo" src={LOGO_URL} alt="Logo" />
                 <div>
                   <div className="footer-title">{copy.title[lang]}</div>
-                  <div className="footer-sub">© {new Date().getFullYear()} • MVP</div>
+                  <div className="footer-sub">© {new Date().getFullYear()} • MVP editorial</div>
                 </div>
               </div>
 
@@ -601,7 +835,9 @@ export default function Page() {
                 <div className="modal-title">{lang === "pt" ? "Calendário" : "Calendar"}</div>
                 <div className="modal-sub">{lang === "pt" ? "Escolhe uma data para ver eventos." : "Pick a date to see events."}</div>
               </div>
-              <button className="icon-close" onClick={() => setCalendarOpen(false)} aria-label="Fechar">✕</button>
+              <button className="icon-close" onClick={() => setCalendarOpen(false)} aria-label="Fechar">
+                ✕
+              </button>
             </div>
 
             <div className="chips">
@@ -650,14 +886,16 @@ export default function Page() {
           <div className="drawer">
             <div className="drawer-head">
               <div className="drawer-title">{lang === "pt" ? "Menu" : "Menu"}</div>
-              <button className="icon-close" onClick={() => setDrawerOpen(false)} aria-label="Fechar">✕</button>
+              <button className="icon-close" onClick={() => setDrawerOpen(false)} aria-label="Fechar">
+                ✕
+              </button>
             </div>
 
             <div className="drawer-list">
               {navItems.map((it) => (
                 <button key={it.key} className="drawer-item" onClick={() => go(it.key)}>
                   <div>
-                    <div style={{ fontWeight: 820, letterSpacing: "-.01em" }}>{it.label}</div>
+                    <div style={{ fontWeight: 900, letterSpacing: "-.01em" }}>{it.label}</div>
                     <div className="small">{it.hint}</div>
                   </div>
                   <div style={{ opacity: 0.8 }}>→</div>
@@ -672,9 +910,19 @@ export default function Page() {
               </button>
 
               <div className="segmented" role="group" aria-label="Idioma">
-                <button className={`seg ${lang === "pt" ? "on" : ""}`} onClick={() => setLang("pt")}>PT</button>
-                <button className={`seg ${lang === "en" ? "on" : ""}`} onClick={() => setLang("en")}>EN</button>
+                <button className={`seg ${lang === "pt" ? "on" : ""}`} onClick={() => setLang("pt")}>
+                  PT
+                </button>
+                <button className={`seg ${lang === "en" ? "on" : ""}`} onClick={() => setLang("en")}>
+                  EN
+                </button>
               </div>
+            </div>
+
+            <div style={{ marginTop: 12, color: "var(--muted)", fontSize: 12, lineHeight: 1.6 }}>
+              {lang === "pt"
+                ? "Nota: MVP editorial. Próximo passo: fichas científicas por castro, fontes e revisão por equipa."
+                : "Note: editorial MVP. Next: scientific sheets per hillfort, sources and expert review."}
             </div>
           </div>
         </div>
@@ -683,12 +931,27 @@ export default function Page() {
   );
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+/* ---------- UI blocks ---------- */
+
+function Section({
+  title,
+  subtitle,
+  tools,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  tools?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="section">
       <div className="section-head">
-        <h2 className="h2">{title}</h2>
-        {subtitle && <p className="muted">{subtitle}</p>}
+        <div className="section-head-left">
+          <h2 className="h2">{title}</h2>
+          {subtitle && <p className="muted">{subtitle}</p>}
+        </div>
+        {tools}
       </div>
       {children}
     </section>
@@ -717,5 +980,58 @@ function QuickCard({ icon, title, desc, onClick }: { icon: string; title: string
         <div className="quick-d">{desc}</div>
       </div>
     </button>
+  );
+}
+
+function Filter({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
+  return (
+    <button className={`filter ${on ? "on" : ""}`} onClick={onClick}>
+      {label}
+    </button>
+  );
+}
+
+function PartnerCard({ title, badge, text }: { title: string; badge: string; text: string }) {
+  return (
+    <div className="card">
+      <div className="card-title-row">
+        <div className="card-title">{title}</div>
+        <span className="badge">{badge}</span>
+      </div>
+      <div className="card-text">{text}</div>
+      <div className="note">
+        {badge === "Dormir" || badge === "Stay"
+          ? "Integração futura: reservas • proximidade • disponibilidade"
+          : badge === "Provar" || badge === "Taste"
+          ? "Integração futura: roteiros • recomendações • sazonalidade"
+          : "Integração futura: fichas • fontes • revisão científica"}
+      </div>
+    </div>
+  );
+}
+
+function FeatureCastro({ castro, lang, onOpen }: { castro: Castro; lang: Lang; onOpen: () => void }) {
+  return (
+    <div className="feature" role="article">
+      <div className="feature-media">
+        <img className="feature-img" src={castro.imageUrl} alt={`${castro.name} — ${castro.place}`} />
+        <div className="feature-grad" />
+      </div>
+      <div className="feature-body">
+        <div className="feature-top">
+          <div className="feature-title">{castro.name}</div>
+          <span className="badge">{castro.minutes} min</span>
+        </div>
+        <div className="card-sub">{castro.place}</div>
+        <div className="feature-text">{castro.snippet[lang]}</div>
+        <div className="meta">
+          <span className="pill2">📍 {castro.place}</span>
+          <span className="pill2">🧭 {lang === "pt" ? "Rota" : "Route"}</span>
+          <button className="pill2" onClick={onOpen} style={{ cursor: "pointer" }}>
+            🗺️ {lang === "pt" ? "Ver mais" : "See more"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
