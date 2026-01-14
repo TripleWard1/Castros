@@ -329,7 +329,8 @@ export default function Page() {
                   </p>
                 </div>
 
-                <div className="grid">
+                <div className="grid cards">
+
                   <MenuCard
                     icon="🏺"
                     title={menuLabel.castros}

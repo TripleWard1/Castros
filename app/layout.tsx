@@ -10,7 +10,15 @@ const GLOBAL_CSS = `
 }
 
 *{ box-sizing:border-box; }
-html,body{ height:100%; }
+html, body {
+  height: 100%;
+  overflow-x: hidden; /* ✅ mata scroll lateral */
+}
+img {
+  max-width: 100%;   /* ✅ impede imagens de passar a largura */
+  height: auto;
+  display: block;
+}
 body{ margin:0; color:var(--text); background:#f6f7fb; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
 
 .container{
@@ -27,6 +35,9 @@ body{ margin:0; color:var(--text); background:#f6f7fb; font-family: ui-sans-seri
               radial-gradient(900px 700px at 60% 90%, rgba(16,185,129,.12), transparent 65%),
               linear-gradient(#f7f8fb, #f3f5fb);
 }
+
+.bg-ambient { overflow: hidden; } /* ✅ */
+
 
 .orb{
   position:absolute;
